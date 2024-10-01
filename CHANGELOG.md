@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2024-10-01
+
+### Changed
+
+- Removed bundling process: The package is now distributed with its original file structure.
+- Updated package structure: Users now work directly with the src files.
+- Simplified build process: Removed Rollup and related dependencies.
+- Updated package.json: Changed "files" field to include "src" instead of "dist".
+
+### Removed
+
+- Rollup configuration and build step.
+- Dist folder: The package no longer includes a dist folder with bundled files.
+
+### Fixed
+
+- Resolved issues related to WebAssembly and Web Worker loading in bundled environments.
+
 ## [1.0.1] - 2024-10-01
 
 ### Added
@@ -19,7 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Modified `rollup.config.js` to copy the drillx directory to the `dist` folder during build.
+- Attempted to resolve WebAssembly loading issues in bundled package (superseded by changes in 1.0.2).
 
 ## [1.0.0] - 2024-10-01
 

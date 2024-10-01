@@ -154,6 +154,10 @@ function runWorker(challengeData, deadline) {
     worker.onerror = function (error) {
       clearTimeout(timeoutId);
       console.error("[runWorker] Error in worker:", error);
+      console.error("Detailed worker error:", error);
+      console.error("Error message:", error.message);
+      console.error("Error filename:", error.filename);
+      console.error("Error lineno:", error.lineno);
       emitStatus("Error in worker");
       worker.terminate();
       resolve(bestSolution);

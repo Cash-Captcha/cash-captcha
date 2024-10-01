@@ -13,8 +13,13 @@ let wasmMemory;
  * @returns {Promise<void>} A promise that resolves when the solver memory is initialized.
  */
 async function initializeSolverMemory() {
-  await init();
-  wasmMemory = new WasmSolverMemory();
+  try {
+    await init();
+    wasmMemory = new WasmSolverMemory();
+  } catch (error) {
+    console.error("[initializeSolverMemory] Error initializing WASM:", error);
+    postMessage({ type: "error", message: error.message });
+  }
 }
 
 /**

@@ -1,19 +1,16 @@
 {
   "name": "cash-captcha",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A lightweight background captcha service utilizing proof of work on Solana",
-  "main": "dist/index.js",
-  "module": "dist/index.esm.js",
-  "browser": "dist/index.umd.js",
-  "types": "dist/index.d.ts",
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "types": "src/index.d.ts",
   "files": [
-    "dist",
+    "src",
     "LICENSE"
   ],
   "scripts": {
-    "build": "rollup -c",
-    "test": "jest",
-    "prepublishOnly": "npm run build"
+    "test": "jest"
   },
   "keywords": [
     "cash captcha",
@@ -37,16 +34,7 @@
     "bs58": "^5.0.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.14.3",
-    "@babel/preset-env": "^7.14.2",
-    "@rollup/plugin-json": "^6.1.0",
-    "jest": "^27.0.4",
-    "rollup": "^2.79.2",
-    "rollup-plugin-babel": "^4.4.0",
-    "rollup-plugin-commonjs": "^10.1.0",
-    "rollup-plugin-copy": "^3.5.0",
-    "rollup-plugin-node-resolve": "^5.2.0",
-    "rollup-plugin-terser": "^7.0.2"
+    "jest": "^27.0.4"
   },
   "peerDependencies": {
     "axios": "^0.21.1"
