@@ -3,6 +3,7 @@ import resolve from "rollup-plugin-node-resolve";
 import commonjs from "rollup-plugin-commonjs";
 import json from "@rollup/plugin-json";
 import { terser } from "rollup-plugin-terser";
+import copy from "rollup-plugin-copy";
 
 export default [
   {
@@ -36,6 +37,12 @@ export default [
         exclude: "node_modules/**",
       }),
       terser(),
+      copy({
+        targets: [
+          { src: "src/index.d.ts", dest: "dist" },
+          { src: "src/drillx/pkg/*", dest: "dist/drillx/pkg" },
+        ],
+      }),
     ],
     external: ["axios", "bs58"],
   },

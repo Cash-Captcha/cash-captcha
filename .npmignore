@@ -51,8 +51,5 @@ Thumbs.db
 docs/
 examples/
 
-# Build artifacts (if you're building locally before publishing)
-# Uncomment the next line if you want to exclude the dist folder
-# dist/
-
-# README and LICENSE are typically included by default, so we don't need to specify them here
+# Explicitly include WASM files
+!dist/drillx/pkg/

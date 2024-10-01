@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2024-10-01
+
+### Added
+
+- TypeScript support: Added `index.d.ts` file with type declarations for the package.
+- Updated build process to include TypeScript declarations in the distribution.
+
+### Changed
+
+- Updated `package.json` to include the `types` field pointing to the TypeScript declarations.
+- Modified `rollup.config.js` to copy TypeScript declarations to the `dist` folder during build.
+
+### Fixed
+
+- Modified `rollup.config.js` to copy the drillx directory to the `dist` folder during build.
+
 ## [1.0.0] - 2024-10-01
 
 ### Added
