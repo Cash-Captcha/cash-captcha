@@ -1,0 +1,52 @@
+{
+  "name": "cash-captcha",
+  "version": "1.0.0",
+  "description": "A lightweight background captcha service utilizing proof of work on Solana",
+  "main": "dist/index.js",
+  "module": "dist/index.esm.js",
+  "browser": "dist/index.umd.js",
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "rollup -c",
+    "test": "jest",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "cash captcha",
+    "background captcha",
+    "proof of work captcha",
+    "solana proof of work",
+    "ore"
+  ],
+  "author": "https://github.com/Cash-Captcha",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Cash-Captcha/cash-captcha.git"
+  },
+  "homepage": "https://cashcaptcha.com",
+  "bugs": {
+    "url": "https://github.com/Cash-Captcha/cash-captcha/issues"
+  },
+  "dependencies": {
+    "axios": "^0.21.1",
+    "bs58": "^5.0.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.14.3",
+    "@babel/preset-env": "^7.14.2",
+    "@rollup/plugin-json": "^6.1.0",
+    "jest": "^27.0.4",
+    "rollup": "^2.50.0",
+    "rollup-plugin-babel": "^4.4.0",
+    "rollup-plugin-commonjs": "^10.1.0",
+    "rollup-plugin-node-resolve": "^5.2.0",
+    "rollup-plugin-terser": "^7.0.2"
+  },
+  "peerDependencies": {
+    "axios": "^0.21.1"
+  }
+}
