@@ -5,12 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.6] - 2024-10-15
+
+### Changed
+
+- Modified solver.js and worker.js to support Node.js environments with worker threads.
+
+## [1.0.5] - 2024-10-15
+
+### Changed
+
+- Modified api.js to support Node.js environments.
+
 ## [1.0.4] - 2024-10-15
 
 ### Changed
 
 - Modified device performance profiling to support Node.js environments.
-- Modified api.js to support Node.js environments.
 
 ## [1.0.3] - 2024-10-15
 

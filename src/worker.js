@@ -6,6 +6,17 @@ import init, {
 } from "./drillx/pkg/drillx_wasm.js";
 import { base64ToUint8Array, uint8ArrayToHex } from "./helpers.js";
 
+// worker.js
+const isNode = typeof self === "undefined" && typeof process !== "undefined";
+
+let parentPort, workerData;
+
+if (isNode) {
+  const workerThreads = await import("worker_threads");
+  parentPort = workerThreads.parentPort;
+  workerData = workerThreads.workerData;
+}
+
 let wasmMemory;
 
 /**
@@ -18,22 +29,42 @@ async function initializeSolverMemory() {
     wasmMemory = new WasmSolverMemory();
   } catch (error) {
     console.error("[initializeSolverMemory] Error initializing WASM:", error);
-    postMessage({ type: "error", message: error.message });
+    sendMessage({ type: "error", message: error.message });
   }
 }
 
 /**
- * Handles the message event from the main thread.
- * @param {MessageEvent} event - The message event containing the challenge data.
+ * Sends a message to the appropriate context (Node.js or Web Worker).
+ *
+ * @param {any} message - The message to be sent.
  */
-onmessage = async function (event) {
-  const { challenge, nonceStart, nonceEnd, deadline, deviceId } = event.data;
+function sendMessage(message) {
+  if (isNode) {
+    parentPort.postMessage(message);
+  } else {
+    self.postMessage(message);
+  }
+}
+
+/**
+ * Handles incoming messages for the captcha worker.
+ *
+ * @param {Object} data - The data object containing the challenge parameters.
+ * @param {string} data.challenge - The base64 encoded challenge string.
+ * @param {number} data.nonceStart - The starting nonce value.
+ * @param {number} data.nonceEnd - The ending nonce value.
+ * @param {string} data.deadline - The deadline for solving the challenge.
+ * @param {string} data.deviceId - The device identifier.
+ * @returns {Promise<void>} - A promise that resolves when the message is handled.
+ */
+async function handleMessage(data) {
+  const { challenge, nonceStart, nonceEnd, deadline, deviceId } = data;
   if (!wasmMemory) {
     try {
       await initializeSolverMemory();
     } catch (error) {
       console.error("[Worker] Error initializing WASM memory:", error);
-      postMessage({ type: "status", status: "Error initializing WASM memory" });
+      sendMessage({ type: "status", status: "Error initializing WASM memory" });
       return;
     }
   }
@@ -55,21 +86,33 @@ onmessage = async function (event) {
     );
 
     if (solution) {
-      postMessage({ type: "solution", solution });
+      sendMessage({ type: "solution", solution });
     } else {
-      postMessage({
+      sendMessage({
         type: "status",
         status: "No solution found within the time limit",
       });
     }
   } catch (error) {
     console.error("[Worker] Error in captcha process:", error);
-    postMessage({
+    sendMessage({
       type: "status",
       status: `Error in captcha process: ${error.message}`,
     });
   }
-};
+}
+
+/**
+ * Handles the message event from the main thread.
+ * @param {MessageEvent} event - The message event containing the challenge data.
+ */
+if (isNode) {
+  parentPort.on("message", handleMessage);
+} else {
+  self.onmessage = function (event) {
+    handleMessage(event.data);
+  };
+}
 
 /**
  * Solves a challenge by iterating through a range of nonces and finding the best solution.
@@ -103,7 +146,7 @@ function solveChallenge(challengeArray, nonceStart, nonceEnd, deadline) {
         (!lastPostedSolution ||
           bestSolution.difficulty > lastPostedSolution.difficulty)
       ) {
-        postMessage({
+        sendMessage({
           type: "solution",
           solution: bestSolution,
         });
@@ -125,7 +168,7 @@ function solveChallenge(challengeArray, nonceStart, nonceEnd, deadline) {
 
         if (!wasmMemory) {
           console.error("WasmSolverMemory is not initialized");
-          postMessage({
+          sendMessage({
             type: "status",
             status: "Error: WasmSolverMemory is not initialized",
           });
@@ -148,12 +191,12 @@ function solveChallenge(challengeArray, nonceStart, nonceEnd, deadline) {
               challenge: Array.from(challengeArray),
             };
             bestDifficulty = currentDifficulty;
-            postMessage({
+            sendMessage({
               type: "solution",
               solution: bestSolution,
             });
 
-            postMessage({
+            sendMessage({
               type: "status",
               status: `New best solution found. Difficulty: ${currentDifficulty}`,
               bestDifficulty: currentDifficulty,
@@ -176,7 +219,7 @@ function solveChallenge(challengeArray, nonceStart, nonceEnd, deadline) {
           const noncesChecked = nonce - nonceStart + 1;
           const noncesPerSecond = (noncesChecked / (now - startTime)) * 1000;
           const noncesRemaining = nonceEnd - nonce + 1;
-          postMessage({
+          sendMessage({
             type: "status",
             status: "Checking solutions...",
             noncesChecked: noncesChecked,
@@ -196,13 +239,13 @@ function solveChallenge(challengeArray, nonceStart, nonceEnd, deadline) {
         setTimeout(solutionIteration, 0);
       } else {
         if (bestSolution) {
-          postMessage({
+          sendMessage({
             type: "status",
             status: `Solving completed. Best solution found with difficulty: ${bestSolution.difficulty}`,
             bestDifficulty: bestSolution.difficulty,
           });
         } else {
-          postMessage({
+          sendMessage({
             type: "status",
             status:
               "Solving completed. No solution found meeting the target difficulty.",

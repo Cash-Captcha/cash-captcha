@@ -2,13 +2,25 @@
 import { createConfig } from "./config.js";
 import { categorizeDevicePerformance } from "./devices.js";
 import { getChallenge, submitSolution } from "./api.js";
+import { fileURLToPath } from "url";
+import path from "path";
+import { Worker, isMainThread, parentPort } from "worker_threads";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const isNode = typeof window === "undefined" && typeof process !== "undefined";
 
 /**
- * Emits the solving status by dispatching a custom event.
+ * Emits the solving status by dispatching a custom event or logging.
  * @param {string} status - The status to be emitted.
  */
 function emitStatus(status) {
-  window.dispatchEvent(new CustomEvent("solvingStatus", { detail: status }));
+  if (isNode) {
+    console.log(`Status: ${status}`);
+  } else {
+    window.dispatchEvent(new CustomEvent("solvingStatus", { detail: status }));
+  }
 }
 
 /**
@@ -120,10 +132,21 @@ async function solveLoop(apiKey) {
  */
 function runWorker(challengeData, deadline) {
   return new Promise((resolve) => {
-    const worker = new Worker(new URL("./worker.js", import.meta.url), {
-      type: "module",
-    });
-    worker.postMessage(challengeData);
+    let worker;
+
+    if (isNode) {
+      const __filename = fileURLToPath(import.meta.url);
+      const __dirname = path.dirname(__filename);
+      worker = new Worker(path.join(__dirname, "worker.js"), {
+        workerData: challengeData,
+        type: "module",
+      });
+    } else {
+      worker = new Worker(new URL("./worker.js", import.meta.url), {
+        type: "module",
+      });
+      worker.postMessage(challengeData);
+    }
 
     const workDuration = Math.max(0, deadline.getTime() - Date.now());
 
@@ -135,33 +158,40 @@ function runWorker(challengeData, deadline) {
       resolve(bestSolution);
     }, workDuration);
 
-    worker.onmessage = function (event) {
-      if (event.data.type === "status") {
-        emitStatus(event.data.status);
-        window.dispatchEvent(
-          new CustomEvent("workerUpdate", { detail: event.data })
-        );
-      } else if (event.data.type === "solution") {
+    function handleMessage(event) {
+      const data = isNode ? event : event.data;
+      if (data.type === "status") {
+        emitStatus(data.status);
+        if (!isNode) {
+          window.dispatchEvent(
+            new CustomEvent("workerUpdate", { detail: data })
+          );
+        }
+      } else if (data.type === "solution") {
         if (
           !bestSolution ||
-          event.data.solution.difficulty > bestSolution.difficulty
+          data.solution.difficulty > bestSolution.difficulty
         ) {
-          bestSolution = event.data.solution;
+          bestSolution = data.solution;
         }
       }
-    };
+    }
 
-    worker.onerror = function (error) {
+    function handleError(error) {
       clearTimeout(timeoutId);
       console.error("[runWorker] Error in worker:", error);
-      console.error("Detailed worker error:", error);
-      console.error("Error message:", error.message);
-      console.error("Error filename:", error.filename);
-      console.error("Error lineno:", error.lineno);
       emitStatus("Error in worker");
       worker.terminate();
       resolve(bestSolution);
-    };
+    }
+
+    if (isNode) {
+      worker.on("message", handleMessage);
+      worker.on("error", handleError);
+    } else {
+      worker.onmessage = handleMessage;
+      worker.onerror = handleError;
+    }
   });
 }
 
@@ -256,7 +286,9 @@ export class Solver {
   }
 
   emitStatus(status) {
-    if (typeof window !== "undefined") {
+    if (isNode) {
+      console.log(`Status: ${status}`);
+    } else if (typeof window !== "undefined") {
       window.dispatchEvent(
         new CustomEvent("solvingStatus", { detail: status })
       );
