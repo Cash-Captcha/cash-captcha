@@ -1,9 +1,10 @@
 {
   "name": "cash-captcha",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A lightweight background captcha service utilizing proof of work on Solana",
   "main": "src/index.js",
   "module": "src/index.js",
+  "type": "module",
   "types": "src/index.d.ts",
   "files": [
     "src",

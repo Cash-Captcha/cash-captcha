@@ -4,7 +4,7 @@ import init, {
   hash_with_memory,
   difficulty,
 } from "./drillx/pkg/drillx_wasm.js";
-import { base64ToUint8Array, uint8ArrayToHex, hexToBase58 } from "./helpers";
+import { base64ToUint8Array, uint8ArrayToHex, hexToBase58 } from "./helpers.js";
 
 let wasmMemory;
 

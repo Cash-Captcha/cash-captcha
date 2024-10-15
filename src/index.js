@@ -3,7 +3,7 @@
  * This module exports the Solver class.
  * @module Solver
  */
-export { Solver } from "./solver";
+export { Solver } from "./solver.js";
 
 /**
  * This module exports the Rewards class.
@@ -11,7 +11,7 @@ export { Solver } from "./solver";
  * This is useful if you want to build a UI showing the amount of rewards earned.
  * @module Rewards
  */
-export { Rewards } from "./rewards";
+export { Rewards } from "./rewards.js";
 
 /**
  * This module exports the Register class.
@@ -19,7 +19,7 @@ export { Rewards } from "./rewards";
  * This is useful if you want to allow your users to claim the rewards they've earned for themselves.
  * @module Register
  */
-export { Register } from "./register";
+export { Register } from "./register.js";
 
 /**
  * This module exports the categorizeDevicePerformance function.
@@ -27,7 +27,7 @@ export { Register } from "./register";
  * This is useful if you want to further customize the minimum performance behavior of the Solver.
  * @module categorizeDevicePerformance
  */
-export { categorizeDevicePerformance } from "./devices";
+export { categorizeDevicePerformance } from "./devices.js";
 
 /**
  * This module exports the createConfig function.
@@ -35,4 +35,4 @@ export { categorizeDevicePerformance } from "./devices";
  * The config object can optionally be used to configure the Solver.
  * @module createConfig
  */
-export { createConfig } from "./config";
+export { createConfig } from "./config.js";

@@ -1,7 +1,7 @@
 // solver.js
-import { createConfig } from "./config";
+import { createConfig } from "./config.js";
 import { categorizeDevicePerformance } from "./devices.js";
-import { getChallenge, submitSolution } from "./api";
+import { getChallenge, submitSolution } from "./api.js";
 
 /**
  * Emits the solving status by dispatching a custom event.

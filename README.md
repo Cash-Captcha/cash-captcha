@@ -6,14 +6,10 @@ Cash Captcha is a background captcha service that enables developers to monetize
 
 - **Unobtrusive Monetization:** Harnesses the idle computing power of your visitors’ devices without impacting their user experience or device performance. Transform your website’s traffic into a steady revenue stream without relying on traditional ads.
 - **Lightweight and Efficient Algorithm:** Runs background tasks smoothly and efficiently, ensuring seamless operation on all devices.
-- **Easy Integration Options:**
-  - npm Package: For developers who prefer using Node.js modules.
-  - WordPress Plugin: Quick and hassle-free setup for WordPress sites.
-  - CDN Script: Easily include Cash Captcha via a script tag for immediate integration: `<script src="https://api.cashcaptcha.com/script"></script>`
 - **Scalable Solution:** Ideal for websites of all sizes—from personal blogs to high-traffic platforms.
 - **Privacy-Focused:** Operates without collecting personal data from your visitors, respecting their privacy and complying with regulations.
 - **Flexible Reward System:** Choose how and when to withdraw your earnings based on your preferences.
-- **Comprehensive Documentation:** Access detailed guides to assist with setup and optimization at [cashcaptcha.com/docs](https://cashcaptcha.com/docs).
+- **Comprehensive Documentation:** Access detailed guides to assist with setup and optimization at [docs.cashcaptcha.com](https://docs.cashcaptcha.com/).
 - **Developer-Friendly:** Easily extensible, allowing developers to build additional features or integrations on top of Cash Captcha for customized use cases.
 - **Referral Program:** Earn additional income by referring new users to Cash Captcha.
 
