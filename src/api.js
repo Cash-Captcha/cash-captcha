@@ -2,6 +2,12 @@
 import axios from "axios";
 import init, { is_valid_solution } from "./drillx/pkg/drillx_wasm.js";
 
+// Check if we're in a Node.js environment
+const isNode = typeof window === "undefined" && typeof process !== "undefined";
+
+// Create a storage object that works in both environments
+const storage = isNode ? new Map() : sessionStorage;
+
 /**
  * Fetches a challenge from the backend API.
  * @param {string} apiKey - The API key to authenticate the request.
@@ -12,7 +18,9 @@ import init, { is_valid_solution } from "./drillx/pkg/drillx_wasm.js";
 export async function getChallenge(apiKey, config, emitStatus) {
   emitStatus("Fetching challenge");
   await new Promise((resolve) => setTimeout(resolve, 1000));
-  const captchaWorkerId = sessionStorage.getItem("captchaWorkerId");
+  const captchaWorkerId = storage.getItem
+    ? storage.getItem("captchaWorkerId")
+    : storage.get("captchaWorkerId");
   const params = new URLSearchParams();
   if (captchaWorkerId) {
     params.append("captchaWorkerId", captchaWorkerId);
@@ -20,7 +28,7 @@ export async function getChallenge(apiKey, config, emitStatus) {
 
   try {
     const response = await axios.get(
-      `${config.apiUrl}/captcha/challenge?${params}`,
+      `${config.apiUrl}/captcha/challenge?${params.toString()}`,
       {
         headers: { "X-API-KEY": apiKey },
       }
@@ -44,7 +52,11 @@ export async function getChallenge(apiKey, config, emitStatus) {
       };
     }
     if (response.data.captchaWorkerId) {
-      sessionStorage.setItem("captchaWorkerId", response.data.captchaWorkerId);
+      if (storage.setItem) {
+        storage.setItem("captchaWorkerId", response.data.captchaWorkerId);
+      } else {
+        storage.set("captchaWorkerId", response.data.captchaWorkerId);
+      }
     }
     return response.data;
   } catch (error) {
@@ -74,11 +86,7 @@ export async function submitSolution(
   await new Promise((resolve) => setTimeout(resolve, 1000));
   try {
     await init();
-    const challengeArray = new Uint8Array(
-      atob(challenge)
-        .split("")
-        .map((char) => char.charCodeAt(0))
-    );
+    const challengeArray = new Uint8Array(Buffer.from(challenge, "base64"));
     const solutionArray = new Uint8Array([
       ...solution.digest,
       ...solution.nonce,
@@ -101,14 +109,16 @@ export async function submitSolution(
       console.error("[submitSolution] Invalid solution, not submitting");
       return null;
     }
-    const captchaWorkerId = sessionStorage.getItem("captchaWorkerId");
+    const captchaWorkerId = storage.getItem
+      ? storage.getItem("captchaWorkerId")
+      : storage.get("captchaWorkerId");
     const params = new URLSearchParams();
     if (captchaWorkerId) {
       params.append("captchaWorkerId", captchaWorkerId);
     }
 
     const response = await axios.post(
-      `${config.apiUrl}/captcha/solution?${params}`,
+      `${config.apiUrl}/captcha/solution?${params.toString()}`,
       solution,
       {
         headers: {
