@@ -1,6 +1,4 @@
 // worker.js
-import { logError, logDebug } from "./print.js";
-
 const isNode = typeof self === "undefined" && typeof process !== "undefined";
 
 let initWasm, WasmSolverMemory, hash_with_memory, difficulty;
@@ -8,8 +6,9 @@ let base64ToUint8Array, uint8ArrayToHex;
 let parentPort, workerData;
 let wasmMemory;
 
+let logError, logDebug;
+
 async function initializeWorker() {
-  logDebug(`Initializing worker`);
   if (isNode) {
     const { parentPort: pp, workerData: wd } = await import("worker_threads");
     parentPort = pp;
@@ -24,6 +23,12 @@ async function initializeWorker() {
 
     const drillxWasm = await import("./drillx/pkg/drillx_wasm.js");
     const helpers = await import("./helpers.js");
+    const { logError: nodeLogError, logDebug: nodeLogDebug } = await import(
+      "./print.js"
+    );
+
+    logError = nodeLogError;
+    logDebug = nodeLogDebug;
 
     initWasm = drillxWasm.default;
     ({ WasmSolverMemory, hash_with_memory, difficulty } = drillxWasm);
@@ -43,10 +48,15 @@ async function initializeWorker() {
       global.wasm = await initWasm(wasmBuffer);
     };
   } else {
-    self.importScripts("./drillx/pkg/drillx_wasm.js", "./helpers.js");
+    self.importScripts(
+      "./drillx/pkg/drillx_wasm.js",
+      "./helpers.js",
+      "./print.js"
+    );
     initWasm = self.wasm_bindgen;
     ({ WasmSolverMemory, hash_with_memory, difficulty } = self.wasm_bindgen);
     ({ base64ToUint8Array, uint8ArrayToHex } = self);
+    ({ logError, logDebug } = self);
 
     self.initializeWasm = async function () {
       if (self.wasm) return;
@@ -61,7 +71,6 @@ async function initializeWorker() {
 
   // Set up message handling after initialization is complete
   if (isNode) {
-    // parentPort.on("message", handleMessage);
     handleMessage(workerData);
   } else {
     self.onmessage = function (event) {
@@ -79,10 +88,6 @@ initializeWorker()
     logError(`Error initializing worker: ${error.message}`);
   });
 
-/**
- * Initializes the solver memory by initializing the WebAssembly module and creating a new instance of WasmSolverMemory.
- * @returns {Promise<void>} A promise that resolves when the solver memory is initialized.
- */
 async function initializeSolverMemory() {
   try {
     await (isNode ? global.initializeWasm() : self.initializeWasm());
@@ -95,11 +100,6 @@ async function initializeSolverMemory() {
   }
 }
 
-/**
- * Sends a message to the appropriate context (Node.js or Web Worker).
- *
- * @param {any} message - The message to be sent.
- */
 function sendMessage(message) {
   if (isNode) {
     parentPort.postMessage(message);
@@ -108,17 +108,6 @@ function sendMessage(message) {
   }
 }
 
-/**
- * Handles incoming messages for the captcha worker.
- *
- * @param {Object} data - The data object containing the challenge parameters.
- * @param {string} data.challenge - The base64 encoded challenge string.
- * @param {number} data.nonceStart - The starting nonce value.
- * @param {number} data.nonceEnd - The ending nonce value.
- * @param {string} data.deadline - The deadline for solving the challenge.
- * @param {string} data.deviceId - The device identifier.
- * @returns {Promise<void>} - A promise that resolves when the message is handled.
- */
 async function handleMessage(data) {
   logDebug(`Worker received message: ${JSON.stringify(data, null, 2)}`);
   const { challenge, nonceStart, nonceEnd, deadline, deviceId } = data;
@@ -167,15 +156,7 @@ async function handleMessage(data) {
     });
   }
 }
-/**
- * Solves a challenge by iterating through a range of nonces and finding the best solution.
- *
- * @param {Array} challengeArray - The challenge array to solve.
- * @param {number} nonceStart - The starting nonce value.
- * @param {number} nonceEnd - The ending nonce value.
- * @param {number} deadline - The deadline for solving the challenge.
- * @returns {Promise} - A promise that resolves with the best solution found.
- */
+
 function solveChallenge(challengeArray, nonceStart, nonceEnd, deadline) {
   return new Promise((resolve) => {
     logDebug(`Starting solveChallenge`);

@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.8] - 2024-10-15
+
+### Added
+
+- Webpack configuration instructions in README for browser environments.
+- Conditional imports for Node.js-specific modules to improve cross-environment compatibility.
+
+### Changed
+
+- Updated `devices.js` to work in both Node.js and browser environments.
+- Modified `api.js` and `solver.js` to handle environment-specific code more effectively.
+
+### Fixed
+
+- Resolved issues with browser functionality caused by Node.js-specific module imports.
+- Addressed "Can't resolve 'os'" and similar errors in browser builds.
+
+### Improved
+
+- Enhanced cross-platform compatibility, allowing the package to work seamlessly in both Node.js and browser environments.
+- Refined error handling and logging for better debugging across different environments.
+
 ## [1.0.7] - 2024-10-15
 
 ### Added

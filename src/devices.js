@@ -1,18 +1,20 @@
 // devices.js
 import { logDebug } from "./print.js";
 
+const isNode = typeof window === "undefined" && typeof process !== "undefined";
+
+let os;
+if (isNode) {
+  os = await import("os");
+}
+
 /**
  * Categorizes the device performance based on various device information.
  * @returns {Promise<{ category: number, deviceInfo: object }>} The device category and device information.
  */
 export async function categorizeDevicePerformance() {
-  // Check if we're in a Node.js environment
-  const isNode =
-    typeof window === "undefined" && typeof process !== "undefined";
-
   if (isNode) {
     // Node.js environment
-    const os = await import("os");
     const deviceInfo = {
       cores: os.cpus().length,
       memory: os.totalmem() / (1024 * 1024 * 1024), // Convert to GB
@@ -71,9 +73,13 @@ export async function categorizeDevicePerformance() {
 
     // Fetch additional battery information (if available)
     if (navigator.getBattery) {
-      const battery = await navigator.getBattery();
-      deviceInfo.batteryLevel = battery.level;
-      deviceInfo.batteryCharging = battery.charging;
+      try {
+        const battery = await navigator.getBattery();
+        deviceInfo.batteryLevel = battery.level;
+        deviceInfo.batteryCharging = battery.charging;
+      } catch (error) {
+        logDebug(`Error getting battery info: ${error.message}`);
+      }
     }
 
     // Define helper functions for performance checks

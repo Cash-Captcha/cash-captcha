@@ -2,22 +2,28 @@
 import { createConfig, setGlobalConfig } from "./config.js";
 import { categorizeDevicePerformance } from "./devices.js";
 import { getChallenge, submitSolution } from "./api.js";
-import { fileURLToPath } from "url";
-import path from "path";
-import { Worker } from "worker_threads";
 import { logInfo, logError, logWarn, logDebug } from "./print.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const isNode = typeof window === "undefined" && typeof process !== "undefined";
 
+let Worker, path, fileURLToPath, __filename, __dirname;
+
+if (isNode) {
+  const nodeWorker = await import("worker_threads");
+  const nodePath = await import("path");
+  const nodeUrl = await import("url");
+
+  Worker = nodeWorker.Worker;
+  path = nodePath;
+  fileURLToPath = nodeUrl.fileURLToPath;
+  __filename = fileURLToPath(import.meta.url);
+  __dirname = path.dirname(__filename);
+} else {
+  Worker = window.Worker;
+}
+
 setGlobalConfig();
 
-/**
- * Emits the solving status by dispatching a custom event or logging.
- * @param {string} status - The status to be emitted.
- */
 function emitStatus(status) {
   if (isNode) {
     logInfo(`Status: ${status}`);
@@ -27,20 +33,11 @@ function emitStatus(status) {
   }
 }
 
-/**
- * Runs a web worker to solve a challenge asynchronously.
- *
- * @param {any} challengeData - The challenge data to be sent to the worker.
- * @param {Date} deadline - The deadline for solving the challenge.
- * @returns {Promise<any>} A promise that resolves with the best solution found by the worker.
- */
 function runWorker(challengeData, deadline) {
   return new Promise((resolve) => {
     let worker;
 
     if (isNode) {
-      const __filename = fileURLToPath(import.meta.url);
-      const __dirname = path.dirname(__filename);
       worker = new Worker(path.join(__dirname, "worker.js"), {
         workerData: challengeData,
         type: "module",
@@ -79,7 +76,9 @@ function runWorker(challengeData, deadline) {
           data.solution.difficulty > bestSolution.difficulty
         ) {
           bestSolution = data.solution;
-          logInfo(`New best solution: ${bestSolution}`);
+          logInfo(
+            `New best solution: ${JSON.stringify(bestSolution, null, 2)}`
+          );
         }
       }
     }
@@ -102,9 +101,6 @@ function runWorker(challengeData, deadline) {
   });
 }
 
-/**
- * Solver class for solving challenges using an API key and user configuration.
- */
 export class Solver {
   constructor(apiKey, userConfig = {}) {
     this.apiKey = apiKey;
@@ -139,11 +135,11 @@ export class Solver {
         const challengeData = await getChallenge(
           this.apiKey,
           this.config,
-          this.emitStatus.bind(this)
+          emitStatus
         );
         if (!challengeData) {
           logWarn(`Failed to get challenge, retrying`);
-          this.emitStatus("Failed to get challenge, retrying");
+          emitStatus("Failed to get challenge, retrying");
           await new Promise((resolve) =>
             setTimeout(resolve, this.config.retryDelay)
           );
@@ -160,7 +156,7 @@ export class Solver {
         if (!this.shouldContinueSolving) break;
 
         logDebug(`Starting solution search`);
-        this.emitStatus("Starting solution search");
+        emitStatus("Starting solution search");
         const solution = await runWorker(
           challengeData,
           new Date(challengeData.deadline)
@@ -168,25 +164,25 @@ export class Solver {
 
         if (solution) {
           logDebug(`Submitting solution`);
-          this.emitStatus("Submitting solution");
+          emitStatus("Submitting solution");
           try {
             const submissionResult = await submitSolution(
               this.apiKey,
               solution,
               challengeData.challenge,
               this.config,
-              this.emitStatus.bind(this)
+              emitStatus
             );
             logDebug(
               `Submission result: ${JSON.stringify(submissionResult, null, 2)}`
             );
-            this.emitStatus(`Solution submitted: ${submissionResult.status}`);
+            emitStatus(`Solution submitted: ${submissionResult.status}`);
           } catch (error) {
             logError(`Error submitting solution: ${error.message}`);
-            this.emitStatus(`Error submitting solution: ${error.message}`);
+            emitStatus(`Error submitting solution: ${error.message}`);
           }
         } else {
-          this.emitStatus("No solution found");
+          emitStatus("No solution found");
         }
 
         if (!this.shouldContinueSolving) break;
@@ -195,26 +191,16 @@ export class Solver {
         const now = new Date();
         const timeToWait = Math.max(0, nextCheckIn.getTime() - now.getTime());
 
-        this.emitStatus(
+        emitStatus(
           `Waiting ${Math.round(timeToWait / 1000)} seconds until next check-in`
         );
         await new Promise((resolve) => setTimeout(resolve, timeToWait));
       } catch (error) {
         logError(`[solveLoop] Error in solving loop: ${error.message}`);
-        this.emitStatus("Error in solving loop");
+        emitStatus("Error in solving loop");
         await new Promise((resolve) => setTimeout(resolve, 5000));
       }
       loopsCompleted++;
-    }
-  }
-
-  emitStatus(status) {
-    if (isNode) {
-      logInfo(`Status: ${status}`);
-    } else if (typeof window !== "undefined") {
-      window.dispatchEvent(
-        new CustomEvent("solvingStatus", { detail: status })
-      );
     }
   }
 

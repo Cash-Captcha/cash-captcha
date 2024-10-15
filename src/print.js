@@ -1,7 +1,12 @@
-import dotenv from "dotenv";
+// print.js
 import { getGlobalConfig } from "./config.js";
 
-dotenv.config();
+const isNode = typeof window === "undefined" && typeof process !== "undefined";
+
+if (isNode) {
+  const dotenv = await import("dotenv");
+  dotenv.config();
+}
 
 const logLevels = {
   error: 0,
@@ -10,19 +15,12 @@ const logLevels = {
   debug: 3,
 };
 
-/**
- * Logs a message with a specified log level.
- *
- * @param {string} level - The log level (e.g., "error", "warn", "info", "debug").
- * @param {string} message - The message to log.
- */
 function log(level, message) {
   const config = getGlobalConfig();
   const LOG_LEVEL = config.logLevel || "info";
   if (logLevels[level] <= logLevels[LOG_LEVEL]) {
     const timestamp = new Date().toISOString();
     const formattedMessage = `[${timestamp}] ${message}`;
-    //message emoji
     const emoji = {
       error: "🟥",
       warn: "🟧",

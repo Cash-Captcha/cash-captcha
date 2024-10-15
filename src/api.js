@@ -1,20 +1,21 @@
 import axios from "axios";
 import init, { is_valid_solution } from "./drillx/pkg/drillx_wasm.js";
-import { Buffer } from "buffer";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
 import { logError, logDebug } from "./print.js";
 
-// Check if we're in a Node.js environment
 const isNode = typeof window === "undefined" && typeof process !== "undefined";
 
-// Create a storage object that works in both environments
+let Buffer, fs, path, fileURLToPath;
+if (isNode) {
+  Buffer = (await import("buffer")).Buffer;
+  fs = await import("fs");
+  path = await import("path");
+  fileURLToPath = (await import("url")).fileURLToPath;
+}
+
 const storage = isNode ? new Map() : sessionStorage;
 
 let wasmModule;
 
-// Initialize WASM module
 async function initializeWasm() {
   if (wasmModule) return;
 
@@ -34,13 +35,6 @@ async function initializeWasm() {
   }
 }
 
-/**
- * Fetches a challenge from the backend API.
- * @param {string} apiKey - The API key to authenticate the request.
- * @param {Object} config - The configuration object.
- * @param {Function} emitStatus - Function to emit status updates.
- * @returns {Promise<Object|null>} - A promise that resolves to the challenge data if successful, or null if there was an error.
- */
 export async function getChallenge(apiKey, config, emitStatus) {
   logDebug("Fetching challenge", config);
   emitStatus("Fetching challenge");
@@ -96,15 +90,6 @@ export async function getChallenge(apiKey, config, emitStatus) {
   }
 }
 
-/**
- * Submits a solution to the backend API.
- * @param {string} apiKey - The API key for authentication.
- * @param {object} solution - The solution object containing the solution digest and nonce.
- * @param {string} challenge - The challenge string.
- * @param {Object} config - The configuration object.
- * @param {Function} emitStatus - Function to emit status updates.
- * @returns {Promise<object|null>} - A promise that resolves to the response data from the backend API, or null if there was an error.
- */
 export async function submitSolution(
   apiKey,
   solution,
@@ -115,7 +100,16 @@ export async function submitSolution(
   await new Promise((resolve) => setTimeout(resolve, 1000));
   try {
     await initializeWasm();
-    const challengeArray = new Uint8Array(Buffer.from(challenge, "base64"));
+    let challengeArray;
+    if (isNode) {
+      challengeArray = new Uint8Array(Buffer.from(challenge, "base64"));
+    } else {
+      challengeArray = new Uint8Array(
+        atob(challenge)
+          .split("")
+          .map((char) => char.charCodeAt(0))
+      );
+    }
     const solutionArray = new Uint8Array([
       ...solution.digest,
       ...solution.nonce,

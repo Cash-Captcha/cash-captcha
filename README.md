@@ -63,15 +63,29 @@ solver.start();
 solver.stop();
 ```
 
-If you prefer to use the Cash Captcha without a module bundler like npm, you can include the script directly in your HTML as shown below:
+## Webpack Configuration
 
-```html
-<script src="https://api.cashcaptcha.com/script"></script>
-<script>
-  const solver = new CashCaptcha.Solver("your-api-key-here");
-  solver.start();
-</script>
+When using Cash Captcha in a browser environment with webpack (e.g., in a Vue.js application), you may need to add some configuration to handle Node.js-specific modules. Add the following to your webpack config or `vue.config.js`:
+
+```javascript
+module.exports = {
+  // ... other config
+  configureWebpack: {
+    resolve: {
+      fallback: {
+        os: false,
+        fs: false,
+        path: false,
+        crypto: false,
+      },
+    },
+  },
+};
 ```
+
+This configuration tells webpack to provide empty modules for Node.js-specific modules when building for the browser. This is necessary because Cash Captcha uses some Node.js modules for enhanced functionality in Node.js environments, but these are not needed in the browser.
+
+Note: This configuration is typically only necessary when building browser applications with webpack. If you're using Cash Captcha in a Node.js environment or including it via a script tag in HTML, no additional configuration is needed.
 
 ## Best Practices
 
