@@ -1,4 +1,5 @@
 import axios from "axios";
+import { logError, logDebug } from "./print.js";
 
 /**
  * Represents a Register object.
@@ -27,6 +28,7 @@ export class Register {
    * @throws {Error} - If there is an error registering the user.
    */
   async registerUser(email, referredBy = "") {
+    logDebug(`Registering user with email: ${email}`);
     try {
       const response = await axios.post(
         `${this.config.apiUrl}/captcha/new-user`,
@@ -38,9 +40,10 @@ export class Register {
           },
         }
       );
+      logDebug(`Response status: ${response.data.status}`);
       return response.data;
     } catch (error) {
-      console.error("[registerUser] Error registering user:", error);
+      logError(`[registerUser] Error registering user: ${error.message}`);
       throw error;
     }
   }
@@ -53,6 +56,7 @@ export class Register {
    * @throws {Error} - If there is an error resetting the claim key.
    */
   async resetClaimKey(userApiKey) {
+    logDebug(`Resetting claim key for user with API key: ${userApiKey}`);
     try {
       const response = await axios.post(
         `${this.config.apiUrl}/captcha/new-claim-key`,
@@ -66,9 +70,10 @@ export class Register {
           },
         }
       );
+      logDebug(`Response status: ${response.data.status}`);
       return response.data;
     } catch (error) {
-      console.error("[resetClaimKey] Error resetting claim key:", error);
+      logError(`[resetClaimKey] Error resetting claim key: ${error.message}`);
       throw error;
     }
   }

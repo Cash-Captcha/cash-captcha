@@ -1,4 +1,5 @@
 // config.js
+
 /**
  * Default configuration object for the application.
  *
@@ -17,11 +18,21 @@
  */
 const defaultConfig = {
   apiUrl: process.env.CASHCAPTCHA_API_ENDPOINT || "https://api.cashcaptcha.com",
-  logLevel: "info",
+  logLevel: "warn",
   maxRetries: 3,
   retryDelay: 5000,
   performanceThreshold: 3,
 };
+
+let cashCaptchaGlobalConfig = { ...defaultConfig };
+
+export function setGlobalConfig(userConfig = {}) {
+  cashCaptchaGlobalConfig = { ...defaultConfig, ...userConfig };
+}
+
+export function getGlobalConfig() {
+  return cashCaptchaGlobalConfig;
+}
 
 export function createConfig(userConfig = {}) {
   return { ...defaultConfig, ...userConfig };

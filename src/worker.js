@@ -1,23 +1,83 @@
 // worker.js
-import init, {
-  WasmSolverMemory,
-  hash_with_memory,
-  difficulty,
-} from "./drillx/pkg/drillx_wasm.js";
-import { base64ToUint8Array, uint8ArrayToHex } from "./helpers.js";
+import { logError, logDebug } from "./print.js";
 
-// worker.js
 const isNode = typeof self === "undefined" && typeof process !== "undefined";
 
+let initWasm, WasmSolverMemory, hash_with_memory, difficulty;
+let base64ToUint8Array, uint8ArrayToHex;
 let parentPort, workerData;
+let wasmMemory;
 
-if (isNode) {
-  const workerThreads = await import("worker_threads");
-  parentPort = workerThreads.parentPort;
-  workerData = workerThreads.workerData;
+async function initializeWorker() {
+  logDebug(`Initializing worker`);
+  if (isNode) {
+    const { parentPort: pp, workerData: wd } = await import("worker_threads");
+    parentPort = pp;
+    workerData = wd;
+
+    const fs = await import("fs");
+    const path = await import("path");
+    const { fileURLToPath } = await import("url");
+
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+
+    const drillxWasm = await import("./drillx/pkg/drillx_wasm.js");
+    const helpers = await import("./helpers.js");
+
+    initWasm = drillxWasm.default;
+    ({ WasmSolverMemory, hash_with_memory, difficulty } = drillxWasm);
+    ({ base64ToUint8Array, uint8ArrayToHex } = helpers);
+
+    global.initializeWasm = async function () {
+      if (global.wasm) return;
+
+      const wasmPath = path.join(
+        __dirname,
+        "drillx",
+        "pkg",
+        "drillx_wasm_bg.wasm"
+      );
+      const wasmBuffer = fs.readFileSync(wasmPath);
+
+      global.wasm = await initWasm(wasmBuffer);
+    };
+  } else {
+    self.importScripts("./drillx/pkg/drillx_wasm.js", "./helpers.js");
+    initWasm = self.wasm_bindgen;
+    ({ WasmSolverMemory, hash_with_memory, difficulty } = self.wasm_bindgen);
+    ({ base64ToUint8Array, uint8ArrayToHex } = self);
+
+    self.initializeWasm = async function () {
+      if (self.wasm) return;
+
+      await initWasm();
+      self.wasm = { WasmSolverMemory, hash_with_memory, difficulty };
+    };
+  }
+
+  await initializeSolverMemory();
+  logDebug(`Worker initialized successfully`);
+
+  // Set up message handling after initialization is complete
+  if (isNode) {
+    // parentPort.on("message", handleMessage);
+    handleMessage(workerData);
+  } else {
+    self.onmessage = function (event) {
+      handleMessage(event.data);
+    };
+  }
 }
 
-let wasmMemory;
+// Initialize the worker
+initializeWorker()
+  .then(() => {
+    logDebug("Status: Worker initialized successfully");
+  })
+  .catch((error) => {
+    logError(`Error initializing worker: ${error.message}`);
+  });
 
 /**
  * Initializes the solver memory by initializing the WebAssembly module and creating a new instance of WasmSolverMemory.
@@ -25,10 +85,12 @@ let wasmMemory;
  */
 async function initializeSolverMemory() {
   try {
-    await init();
+    await (isNode ? global.initializeWasm() : self.initializeWasm());
     wasmMemory = new WasmSolverMemory();
   } catch (error) {
-    console.error("[initializeSolverMemory] Error initializing WASM:", error);
+    logError(
+      `[initializeSolverMemory] Error initializing WASM: ${error.message}`
+    );
     sendMessage({ type: "error", message: error.message });
   }
 }
@@ -58,12 +120,13 @@ function sendMessage(message) {
  * @returns {Promise<void>} - A promise that resolves when the message is handled.
  */
 async function handleMessage(data) {
+  logDebug(`Worker received message: ${JSON.stringify(data, null, 2)}`);
   const { challenge, nonceStart, nonceEnd, deadline, deviceId } = data;
   if (!wasmMemory) {
     try {
       await initializeSolverMemory();
     } catch (error) {
-      console.error("[Worker] Error initializing WASM memory:", error);
+      logError(`[Worker] Error initializing WASM memory: ${error.message}`);
       sendMessage({ type: "status", status: "Error initializing WASM memory" });
       return;
     }
@@ -78,6 +141,7 @@ async function handleMessage(data) {
       );
     }
 
+    logDebug("Starting solution search");
     const solution = await solveChallenge(
       challengeArray,
       nonceStart,
@@ -86,34 +150,23 @@ async function handleMessage(data) {
     );
 
     if (solution) {
+      logDebug(`Solution found: ${JSON.stringify(solution, null, 2)}`);
       sendMessage({ type: "solution", solution });
     } else {
+      logDebug("No solution found within the time limit");
       sendMessage({
         type: "status",
         status: "No solution found within the time limit",
       });
     }
   } catch (error) {
-    console.error("[Worker] Error in captcha process:", error);
+    logError(`[Worker] Error in captcha process: ${error.message}`);
     sendMessage({
       type: "status",
       status: `Error in captcha process: ${error.message}`,
     });
   }
 }
-
-/**
- * Handles the message event from the main thread.
- * @param {MessageEvent} event - The message event containing the challenge data.
- */
-if (isNode) {
-  parentPort.on("message", handleMessage);
-} else {
-  self.onmessage = function (event) {
-    handleMessage(event.data);
-  };
-}
-
 /**
  * Solves a challenge by iterating through a range of nonces and finding the best solution.
  *
@@ -125,6 +178,7 @@ if (isNode) {
  */
 function solveChallenge(challengeArray, nonceStart, nonceEnd, deadline) {
   return new Promise((resolve) => {
+    logDebug(`Starting solveChallenge`);
     let bestSolution = null;
     let bestDifficulty = 0;
     let nonce = nonceStart;
@@ -167,7 +221,7 @@ function solveChallenge(challengeArray, nonceStart, nonceEnd, deadline) {
         view.setUint32(4, highPart, true);
 
         if (!wasmMemory) {
-          console.error("WasmSolverMemory is not initialized");
+          logError("WasmSolverMemory is not initialized");
           sendMessage({
             type: "status",
             status: "Error: WasmSolverMemory is not initialized",
@@ -204,7 +258,9 @@ function solveChallenge(challengeArray, nonceStart, nonceEnd, deadline) {
           }
         } catch (error) {
           if (error.message !== "No solutions" && error.message) {
-            console.error("[solveChallenge] Error in hash calculation:", error);
+            logError(
+              `[solveChallenge] Error in hash calculation: ${error.message}`
+            );
           }
         }
 

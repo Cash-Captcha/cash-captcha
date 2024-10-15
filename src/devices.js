@@ -1,4 +1,5 @@
 // devices.js
+import { logDebug } from "./print.js";
 
 /**
  * Categorizes the device performance based on various device information.
@@ -29,6 +30,8 @@ export async function categorizeDevicePerformance() {
     } else {
       category = 3; // Very low performance
     }
+
+    logDebug(`Device category: ${category}`);
 
     return { category, deviceInfo };
   } else {
@@ -168,6 +171,8 @@ export async function categorizeDevicePerformance() {
     } else {
       category = 3; // Very low-performance
     }
+
+    logDebug(`Device category: ${category}`);
 
     return {
       category,

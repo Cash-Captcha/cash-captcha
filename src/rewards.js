@@ -1,4 +1,5 @@
 import axios from "axios";
+import { logError, logDebug } from "./print.js";
 
 /**
  * Represents a Rewards object.
@@ -21,6 +22,7 @@ export class Rewards {
    * @returns {Promise<object>} - The rewards information.
    */
   async info() {
+    logDebug(`Fetching rewards info`);
     try {
       const response = await axios.get(`${this.config.apiUrl}/rewards/info`, {
         headers: {
@@ -28,9 +30,10 @@ export class Rewards {
           "X-API-KEY": this.apiKey,
         },
       });
+      logDebug(`Response status: ${response.data.status}`);
       return response.data;
     } catch (error) {
-      console.error("[info] Error fetching rewards info:", error);
+      logError(`[info] Error fetching rewards info: ${error.message}`);
       throw error;
     }
   }
@@ -44,6 +47,7 @@ export class Rewards {
    */
   async history(epoch, page = 0, itemsPerPage = 10) {
     try {
+      logDebug(`Fetching rewards history for epoch: ${epoch}`);
       const response = await axios.get(
         `${this.config.apiUrl}/rewards/history`,
         {
@@ -58,9 +62,10 @@ export class Rewards {
           },
         }
       );
+      logDebug(`Response status: ${response.data.status}`);
       return response.data;
     } catch (error) {
-      console.error("[history] Error fetching rewards history:", error);
+      logError(`[history] Error fetching rewards history: ${error.message}`);
       throw error;
     }
   }
@@ -73,6 +78,7 @@ export class Rewards {
    * @returns {Promise<object>} - The claim response.
    */
   async claim(amount, withdrawalToken, withdrawalAddress) {
+    logDebug(`Initiating rewards claim with amount: ${amount}`);
     try {
       const response = await axios.post(
         `${this.config.apiUrl}/rewards/claim`,
@@ -89,9 +95,10 @@ export class Rewards {
           },
         }
       );
+      logDebug(`Response status: ${response.data.status}`);
       return response.data;
     } catch (error) {
-      console.error("[claim] Error claiming rewards:", error);
+      logError(`[claim] Error claiming rewards: ${error.message}`);
       throw error;
     }
   }

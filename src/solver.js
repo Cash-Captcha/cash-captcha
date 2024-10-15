@@ -1,15 +1,18 @@
 // solver.js
-import { createConfig } from "./config.js";
+import { createConfig, setGlobalConfig } from "./config.js";
 import { categorizeDevicePerformance } from "./devices.js";
 import { getChallenge, submitSolution } from "./api.js";
 import { fileURLToPath } from "url";
 import path from "path";
-import { Worker, isMainThread, parentPort } from "worker_threads";
+import { Worker } from "worker_threads";
+import { logInfo, logError, logWarn, logDebug } from "./print.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const isNode = typeof window === "undefined" && typeof process !== "undefined";
+
+setGlobalConfig();
 
 /**
  * Emits the solving status by dispatching a custom event or logging.
@@ -17,109 +20,10 @@ const isNode = typeof window === "undefined" && typeof process !== "undefined";
  */
 function emitStatus(status) {
   if (isNode) {
-    console.log(`Status: ${status}`);
+    logInfo(`Status: ${status}`);
   } else {
+    logDebug(`Status: ${status}`);
     window.dispatchEvent(new CustomEvent("solvingStatus", { detail: status }));
-  }
-}
-
-/**
- * Starts the captcha solving process.
- *
- * @param {string} apiKey - The API key to be used for solving captchas.
- */
-let shouldContinueSolving = true;
-export function startSolving(apiKey) {
-  shouldContinueSolving = true;
-  solveLoop(apiKey);
-}
-
-/**
- * Stops the captcha solving process.
- */
-export function stopSolving() {
-  shouldContinueSolving = false;
-}
-
-/**
- * Solves the captcha challenge in a loop until stopped.
- *
- * @param {string} apiKey - The API key used for authentication.
- * @returns {Promise<void>} - A promise that resolves when the solving loop is completed.
- */
-async function solveLoop(apiKey) {
-  let loopsCompleted = 0;
-  let runIndefinitely = true;
-  const { category } = await categorizeDevicePerformance();
-  if (category >= 3) {
-    runIndefinitely = false;
-  }
-  while (runIndefinitely && shouldContinueSolving) {
-    if (loopsCompleted === 0) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    }
-
-    try {
-      const challengeData = await getChallenge(apiKey);
-      if (!challengeData) {
-        console.error(
-          "[solveLoop] Failed to get challenge, retrying in 30 seconds"
-        );
-        emitStatus("Failed to get challenge, retrying in 30 seconds");
-        await new Promise((resolve) => setTimeout(resolve, 30000));
-        continue;
-      } else if (challengeData.status === "not_ready") {
-        const retryDelay = challengeData.retryDelay || 30000;
-        await new Promise((resolve) => setTimeout(resolve, retryDelay));
-        continue;
-      }
-
-      if (!shouldContinueSolving) break;
-
-      emitStatus("Starting solution search");
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      const deadline = new Date(challengeData.deadline);
-      const nextCheckIn = new Date(challengeData.nextCheckIn);
-
-      if (isNaN(deadline.getTime()) || isNaN(nextCheckIn.getTime())) {
-        console.error("[solveLoop] Invalid deadline or nextCheckIn time");
-        emitStatus("Invalid deadline or nextCheckIn time");
-        await new Promise((resolve) => setTimeout(resolve, 5000));
-        continue;
-      }
-
-      const solution = await runWorker(challengeData, deadline);
-
-      if (solution) {
-        emitStatus("Submitting solution");
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        const submissionResult = await submitSolution(
-          apiKey,
-          solution,
-          challengeData.challenge
-        );
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-      } else {
-        emitStatus("No solution found");
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-      }
-
-      if (!shouldContinueSolving) break;
-
-      const now = new Date();
-      const timeToWait = Math.max(0, nextCheckIn.getTime() - now.getTime());
-
-      emitStatus(
-        `Waiting ${Math.round(timeToWait / 1000)} seconds until next check-in`
-      );
-      await new Promise((resolve) => setTimeout(resolve, timeToWait));
-    } catch (error) {
-      console.error("[solveLoop] Error in solving loop:", error);
-      emitStatus("Error in solving loop");
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-    }
-    loopsCompleted++;
   }
 }
 
@@ -155,11 +59,13 @@ function runWorker(challengeData, deadline) {
     const timeoutId = setTimeout(() => {
       emitStatus("Solve duration reached, terminating worker");
       worker.terminate();
+      logDebug(`Best solution found: ${JSON.stringify(bestSolution, null, 2)}`);
       resolve(bestSolution);
     }, workDuration);
 
     function handleMessage(event) {
       const data = isNode ? event : event.data;
+      logInfo(`Received message from worker: ${JSON.stringify(data, null, 2)}`);
       if (data.type === "status") {
         emitStatus(data.status);
         if (!isNode) {
@@ -173,13 +79,14 @@ function runWorker(challengeData, deadline) {
           data.solution.difficulty > bestSolution.difficulty
         ) {
           bestSolution = data.solution;
+          logInfo(`New best solution: ${bestSolution}`);
         }
       }
     }
 
     function handleError(error) {
       clearTimeout(timeoutId);
-      console.error("[runWorker] Error in worker:", error);
+      logError(`[runWorker] Error in worker: ${error.message}`);
       emitStatus("Error in worker");
       worker.terminate();
       resolve(bestSolution);
@@ -202,19 +109,23 @@ export class Solver {
   constructor(apiKey, userConfig = {}) {
     this.apiKey = apiKey;
     this.config = createConfig(userConfig);
+    setGlobalConfig(this.config);
     this.shouldContinueSolving = false;
   }
 
   async start() {
+    logDebug(`Starting solver with API key: ${this.apiKey}`);
     this.shouldContinueSolving = true;
     await this.solveLoop();
   }
 
   stop() {
     this.shouldContinueSolving = false;
+    logDebug(`Stopping solver with API key: ${this.apiKey}`);
   }
 
   async solveLoop() {
+    logDebug(`Starting solve loop.`);
     let loopsCompleted = 0;
     const { category } = await categorizeDevicePerformance();
     const runIndefinitely = category < this.config.performanceThreshold;
@@ -231,6 +142,7 @@ export class Solver {
           this.emitStatus.bind(this)
         );
         if (!challengeData) {
+          logWarn(`Failed to get challenge, retrying`);
           this.emitStatus("Failed to get challenge, retrying");
           await new Promise((resolve) =>
             setTimeout(resolve, this.config.retryDelay)
@@ -247,6 +159,7 @@ export class Solver {
 
         if (!this.shouldContinueSolving) break;
 
+        logDebug(`Starting solution search`);
         this.emitStatus("Starting solution search");
         const solution = await runWorker(
           challengeData,
@@ -254,14 +167,24 @@ export class Solver {
         );
 
         if (solution) {
+          logDebug(`Submitting solution`);
           this.emitStatus("Submitting solution");
-          await submitSolution(
-            this.apiKey,
-            solution,
-            challengeData.challenge,
-            this.config,
-            this.emitStatus.bind(this)
-          );
+          try {
+            const submissionResult = await submitSolution(
+              this.apiKey,
+              solution,
+              challengeData.challenge,
+              this.config,
+              this.emitStatus.bind(this)
+            );
+            logDebug(
+              `Submission result: ${JSON.stringify(submissionResult, null, 2)}`
+            );
+            this.emitStatus(`Solution submitted: ${submissionResult.status}`);
+          } catch (error) {
+            logError(`Error submitting solution: ${error.message}`);
+            this.emitStatus(`Error submitting solution: ${error.message}`);
+          }
         } else {
           this.emitStatus("No solution found");
         }
@@ -277,7 +200,7 @@ export class Solver {
         );
         await new Promise((resolve) => setTimeout(resolve, timeToWait));
       } catch (error) {
-        console.error("[solveLoop] Error in solving loop:", error);
+        logError(`[solveLoop] Error in solving loop: ${error.message}`);
         this.emitStatus("Error in solving loop");
         await new Promise((resolve) => setTimeout(resolve, 5000));
       }
@@ -287,7 +210,7 @@ export class Solver {
 
   emitStatus(status) {
     if (isNode) {
-      console.log(`Status: ${status}`);
+      logInfo(`Status: ${status}`);
     } else if (typeof window !== "undefined") {
       window.dispatchEvent(
         new CustomEvent("solvingStatus", { detail: status })
