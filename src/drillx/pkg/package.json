@@ -1,0 +1,28 @@
+{
+  "name": "drillx-wasm",
+  "type": "module",
+  "description": "WebAssembly bindings for Drillx",
+  "version": "2.1.0",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/regolith-labs/ore"
+  },
+  "files": [
+    "drillx_wasm_bg.wasm",
+    "drillx_wasm.js",
+    "drillx_wasm.d.ts"
+  ],
+  "main": "drillx_wasm.js",
+  "homepage": "https://ore.supply",
+  "types": "drillx_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ],
+  "keywords": [
+    "solana",
+    "crypto",
+    "mining",
+    "wasm"
+  ]
+}

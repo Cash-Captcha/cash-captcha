@@ -1,0 +1,51 @@
+# Test files
+test/
+__tests__/
+*.test.js
+*.spec.js
+
+# Configuration files
+.babelrc
+.eslintrc
+.prettierrc
+jest.config.js
+
+# Git related
+.git/
+.gitignore
+
+# CI/CD
+.github/
+.travis.yml
+.gitlab-ci.yml
+
+# Editor specific
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Dependency directories
+node_modules/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Misc
+.DS_Store
+Thumbs.db
+
+# Documentation and examples (if you want to exclude them)
+docs/
+examples/
+
+# Explicitly include WASM files
+!dist/drillx/pkg/

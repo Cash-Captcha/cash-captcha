@@ -1,0 +1,43 @@
+{
+  "name": "cash-captcha",
+  "version": "1.0.8",
+  "description": "A lightweight background captcha service utilizing proof of work on Solana",
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "type": "module",
+  "types": "src/index.d.ts",
+  "files": [
+    "src",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "jest"
+  },
+  "keywords": [
+    "cash captcha",
+    "background captcha",
+    "proof of work captcha",
+    "solana proof of work",
+    "ore"
+  ],
+  "author": "https://github.com/Cash-Captcha",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Cash-Captcha/cash-captcha.git"
+  },
+  "homepage": "https://cashcaptcha.com",
+  "bugs": {
+    "url": "https://github.com/Cash-Captcha/cash-captcha/issues"
+  },
+  "dependencies": {
+    "axios": "^0.21.1",
+    "bs58": "^5.0.0"
+  },
+  "devDependencies": {
+    "jest": "^27.0.4"
+  },
+  "peerDependencies": {
+    "axios": "^0.21.1"
+  }
+}
