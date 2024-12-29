@@ -47,6 +47,11 @@ export async function getChallenge(apiKey, config, emitStatus) {
     params.append("captchaWorkerId", captchaWorkerId);
   }
   logDebug(`captchaWorkerId: ${captchaWorkerId}`);
+  if (config.nonceRangeSize) {
+    params.append("nonceRangeSize", config.nonceRangeSize);
+  } else {
+    params.append("nonceRangeSize", 1000);
+  }
 
   try {
     logDebug("Calling cash captcha API for challenge");

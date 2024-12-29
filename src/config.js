@@ -9,6 +9,7 @@
  * @property {number} maxRetries - The maximum number of retries for API requests.
  * @property {number} retryDelay - The delay (in milliseconds) between retries for API requests.
  * @property {number} performanceThreshold - The minimum performance threshold required to active the application ranging from 0 (high performance) to 4 (low performance).
+ * @property {number} nonceRangeSize - The maximum number of nonce values to use for solving challenges.
  */
 
 /**
@@ -22,6 +23,7 @@ const defaultConfig = {
   maxRetries: 3,
   retryDelay: 5000,
   performanceThreshold: 3,
+  nonceRangeSize: 1000,
 };
 
 let cashCaptchaGlobalConfig = { ...defaultConfig };
